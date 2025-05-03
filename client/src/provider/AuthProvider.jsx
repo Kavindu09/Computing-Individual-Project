@@ -9,10 +9,13 @@ import {
   signOut,
   updateProfile
 } from "firebase/auth";
+import PropTypes from 'prop-types';  // Import PropTypes
 
+// Creating AuthContext here
 export const AuthContext = createContext();
 const googleProvider = new GoogleAuthProvider();
 
+// AuthProvider component
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -71,6 +74,11 @@ const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+// Prop types validation for `children`
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,  // Validate children prop
 };
 
 export default AuthProvider;
