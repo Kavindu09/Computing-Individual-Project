@@ -1,174 +1,186 @@
 import { useContext, useState } from "react";
+import { Helmet } from "react-helmet";
+import toast from "react-hot-toast";
+import { FaEye, FaEyeSlash } from "react-icons/fa6";
+import { FcGoogle } from "react-icons/fc";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthContext } from "../provider/AuthProvider";
-import { FaGoogle } from "react-icons/fa";
-import Swal from "sweetalert2";
-
+import AuthContext from "../provider/AuthContext";
+import registerImg from "../assets/register.gif";
 const Register = () => {
+  const { createUser, googleSignIn, updateUserProfile, setUser } =
+    useContext(AuthContext);
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
+  const handleRegister = (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    const name = form.get("name");
+    const photo = form.get("photo");
+    const email = form.get("email");
+    const password = form.get("password");
+    setError("");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError("One Uppercase letter required");
+      toast.error("One uppercase letter required");
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError("One lowercase letter required");
+      toast.error("One lowercase letter required");
+      return;
+    }
+    createUser(email, password)
+      .then((result) => {
+        updateUserProfile(name, photo).then(() => {
+          setUser(result.user);
+          navigate("/");
+          toast.success("Registered successfully", {
+            duration: 4000,
+            position: "top-center",
+          });
+        });
+      })
+      .catch(() => {
+        toast.error("You are already registered with this email");
+        navigate("/login");
+      });
+  };
 
-    const { createNewUser, setUser, updateUserProfile, signInWithGoogle } = useContext(AuthContext);
-    const navigate = useNavigate();
-    const [error, setError] = useState({})
-    const handleSubmit = (e) => {
-        e.preventDefault();
-
-        const form = new FormData(e.target);
-        const name = form.get('name');
-        if (name.length < 5) {
-            setError({ ...error, name: 'name must be more than 5 character long' });
-            return;
-        }
-        const photo = form.get('photo');
-        const email = form.get('email');
-        const password = form.get('password');
-        if (password.length < 6 ||
-            !/[A-Z]/.test(password) ||
-            !/[a-z]/.test(password)) {
-            setError({
-                ...error,
-                name: 'Password must be at least 6 characters long and include both uppercase and lowercase letters.'
-            });
-            return;
-        }
-        console.log({ name, photo, email, password });
-
-        createNewUser(email, password)
-            .then(result => {
-                console.log('User created at firebase', result.user);
-                const user = result.user;
-                const newUser = { name, email, photo }
-
-                // Save new user info to the database
-                fetch('https://visa-navigator-server-umber.vercel.app/users', {
-                    method: 'POST',
-                    headers: {
-                        'content-type': 'application/json'
-                    },
-                    body: JSON.stringify(newUser)
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if(data.insertedId){
-                            console.log('user created in db');
-                            Swal.fire({
-                                position: "top-center",
-                                icon: "success",
-                                title: "Registration Successful!",
-                                showConfirmButton: false,
-                                timer: 1500
-                            });
-                        }
-                    });
-
-                setUser(user);
-                // console.log(user);
-                updateUserProfile({ displayName: name, photoURL: photo })
-                    .then(() => {
-                        navigate('/');
-                    })
-                    .catch(err => {
-                        console.log(err);
-                    })
-            })
-            .catch((error) => {
-                const errorCode = error.code;
-                const errorMessage = error.message;
-                if (errorCode === "auth/email-already-in-use") {
-                    setError({ email: "This email is already in use. Please use another one." });
-                } else {
-                    setError({ general: errorMessage });
-                }
-            });
-    };
-    const handleGoogleSignIn = () => {
-        signInWithGoogle()
-            .then((result) => {
-                const user = result.user;
-                const newUser = {
-                    name: user.displayName,
-                    email: user.email,
-                    photo: user.photoURL,
-                };
-    
-                // Check or add user in the database
-                fetch('https://visa-navigator-server-umber.vercel.app/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newUser),
-                })
-                    .then((res) => res.json())
-                    .then((data) => {
-                        if (data.message === 'User already exists') {
-                            console.log('User already exists:', data.user);
-                        } else {
-                            console.log('New user created:', data.user);
-                        }
-                        setUser(user); // Save user to context
-                        navigate(location?.state?.from || '/', { replace: true });
-                    })
-                    .catch((err) => console.error('Error:', err));
-            })
-            .catch((error) => {
-                setError({ google: error.message });
-            });
-    };
-    
-    
-    
-
-    return (
-        <div className="min-h-screen flex justify-center items-center">
-            <div className="card bg-base-100 w-full max-w-lg shrink-0 rounded-none p-10 ">
-                <h2 className="text-2xl font-semibold text-center ">Register your account</h2>
-                <form onSubmit={handleSubmit} className="card-body">
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text">Name</span>
-                        </label>
-                        <input name="name" type="text" placeholder="name" className="input input-bordered" required />
-                    </div>
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text">PhotoURL</span>
-                        </label>
-                        <input name="photo" type="text" placeholder="photo url" className="input input-bordered" required />
-                    </div>
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text">Email</span>
-                        </label>
-                        <input name="email" type="email" placeholder="email" className="input input-bordered" required />
-                    </div>
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text">Password</span>
-                        </label>
-                        <input name="password" type="password" placeholder="password" className="input input-bordered" required />
-                    </div>
-                    {
-                        error.name &&
-                        <label className="label text-xs text-red-600">
-                            {error.name}
-                        </label>
-                    }
-                    <div className="form-control mt-6">
-                        <button className="btn btn-neutral">Sign Up</button>
-                    </div>
-                    <h2 className="text-center py-5 "> Already have an Account? {" "} <Link className="font-semibold link-hover" to='/auth/login'>Login</Link> </h2>
-                    <div>
-                        <h2 className="text-center font-medium">Or</h2>
-                    </div>
-                    {error.google && (
-                        <label className="label text-red-600 text-sm">{error.google}</label>
-                    )}
-                </form>
-                <button onClick={handleGoogleSignIn} className="btn btn-wide md:w-[368px] mx-auto">
-                    <FaGoogle /> Sign Up with Google
-                </button>
+  const handleGoogleSignIn = async () => {
+    try {
+      await googleSignIn();
+      navigate("/");
+      toast.success("Registered successfully with Google");
+      // eslint-disable-next-line no-unused-vars
+    } catch (error) {
+      toast.error("An error occurred while signing in with Google ");
+    }
+  };
+  return (
+    <>
+      <Helmet>
+        <title>Register - Visa Navigator</title>
+        <meta name="description" content="Register for Visa Navigator" />
+        <meta name="og:title" content="Register - Visa Navigator" />
+      </Helmet>
+      <div className="min-h-screen flex items-center justify-center dark:bg-neutral  py-12  sm:px-6 lg:px-8">
+        <div className="max-w-6xl w-full">
+          <div className="card grid md:grid-cols-2 border px-0 bg-base-100 shadow-xl mx-auto">
+            <div className="">
+              <div className="flex justify-center items-center h-full md:border-r-4 ">
+                <img
+                  src={registerImg}
+                  alt="register"
+                  className="rounded-xl h-48 md:h-auto object-cover"
+                />
+              </div>
             </div>
+            <div className="sm:p-6 ">
+              <h2 className="mt-6 text-center text-3xl font-extrabold ">
+                Register
+              </h2>
+              <div className=" card-body">
+                <form onSubmit={handleRegister} className=" space-y-4">
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Name</span>
+                    </label>
+                    <input
+                      name="name"
+                      type="text"
+                      placeholder="Name"
+                      className="input input-bordered"
+                      required
+                    />
+                  </div>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Photo URL</span>
+                    </label>
+                    <input
+                      name="photo"
+                      type="text"
+                      placeholder="photo URL"
+                      className="input input-bordered"
+                      required
+                    />
+                  </div>
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Email</span>
+                    </label>
+                    <input
+                      name="email"
+                      type="email"
+                      placeholder="email"
+                      className="input input-bordered"
+                      required
+                    />
+                  </div>
+                  <div className="form-control relative">
+                    <label className="label">
+                      <span className="label-text">Password</span>
+                    </label>
+                    <input
+                      name="password"
+                      type={!showPassword ? "password" : "text"}
+                      placeholder="password"
+                      className="input input-bordered"
+                      required
+                    />
+                    <div className="relative w-full px-3 py-2 text-gray-400">
+                      {error && <p className="text-red-600">{error}</p>}
+                    </div>
+                    {showPassword ? (
+                      <FaEye
+                        size={20}
+                        className=" cursor-pointer absolute right-5 translate-y-12 top-1 "
+                        onClick={() => setShowPassword(!showPassword)}
+                      />
+                    ) : (
+                      <FaEyeSlash
+                        size={20}
+                        className=" cursor-pointer absolute right-5 translate-y-12 top-1 "
+                        onClick={() => setShowPassword(!showPassword)}
+                      />
+                    )}
+                  </div>
+                  <div className="form-control my-3">
+                    <button type="submit" className="btn btn-neutral">
+                      Register
+                    </button>
+                  </div>
+                  <p className="text-sm text-center">
+                    Already have an account?{" "}
+                    <Link to="/login" className="font-bold underline">
+                      Login here
+                    </Link>
+                  </p>
+                </form>
+                <div className="divider">OR</div>
+                <div className="">
+                  <button
+                    onClick={handleGoogleSignIn}
+                    className="btn shadow w-full"
+                  >
+                    <FcGoogle className="text-xl" />
+                    <span className="">Register in with Google</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-    );
+      </div>
+    </>
+  );
 };
 
 export default Register;

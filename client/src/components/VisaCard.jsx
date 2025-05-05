@@ -1,41 +1,59 @@
+/* eslint-disable react/prop-types */
+import { Bounce, Fade, Flip, Hinge } from "react-awesome-reveal";
 import { Link } from "react-router-dom";
 
 const VisaCard = ({ visa }) => {
-    const { _id, countryPhoto, countryName, visaType, processingTime, fee, ageRestriction } = visa;
-
-    return (
-        <div className="card bg-base-100 shadow-xl w-full">
-            <figure>
-                <img
-                    src={countryPhoto}
-                    alt={`${countryName} photo`}
-                    className="h-40 sm:h-48 lg:h-60 w-full object-cover"
-                />
-            </figure>
-            <div className="card-body p-4 sm:p-6">
-                <h2 className="font-bold text-lg md:text-xl lg:text-2xl mb-2">
-                    {countryName}
-                </h2>
-                <p className="text-sm md:text-base">
-                    <span className="font-bold">Visa Type:</span> {visaType}
-                </p>
-                <p className="text-sm md:text-base">
-                    <span className="font-bold">Processing Time:</span> {processingTime} Days
-                </p>
-                <p className="text-sm md:text-base">
-                    <span className="font-bold">Age Restriction:</span> {ageRestriction}+
-                </p>
-                <p className="text-sm md:text-base">
-                    <span className="font-bold">Fee:</span> ${fee}
-                </p>
-                <div className="card-actions justify-center mt-4">
-                    <Link to={`visa-details/${_id}`} className="btn btn-sm md:btn-md w-full btn-neutral">
-                        See Details
-                    </Link>
-                </div>
-            </div>
+  const {
+    _id,
+    Country_image,
+    Country_name,
+    Visa_type,
+    Processing_time,
+    Fee,
+    Validity,
+    Application_method,
+  } = visa;
+  return (
+    <>
+      <div className=" card relative dark:bg-base-300 bg-base-100 shadow-xl border dark:textarea-bordered dark:text-base-content ">
+        <figure className="m-4 rounded-xl border dark:border-neutral ">
+          <img
+            src={Country_image}
+            alt={Country_name}
+            className=" w-full h-48 object-cover"
+          />
+        </figure>
+        <div className="card-body justify-between gap-0 px-0 pt-0 pb-4">
+          <h2 className="card-title sm:text-2xl px-4 py-2 ">{Country_name}</h2>
+          <div className="flex flex-col flex-grow  px-4">
+            <p className=" ">
+              <strong>Visa Type : </strong> {Visa_type}
+            </p>
+            <p className=" ">
+              <strong>Processing Time :</strong> {Processing_time}
+            </p>
+            <p className=" ">
+              <strong>Fee :</strong> ${Fee}
+            </p>
+            <p className=" ">
+              <strong>Validity :</strong> {Validity}
+            </p>
+            <p className=" ">
+              <strong>Application Method :</strong> {Application_method}
+            </p>
+          </div>
+          <div className="card-actions px-4 ">
+            <Link to={`/single-details/${_id}`}>
+              <button className="btn btn-neutral dark:btn-outline dark:hover:text-white dark:hover:bg-neutral mt-3">
+                {" "}
+                See Details
+              </button>
+            </Link>
+          </div>
         </div>
-    );
+      </div>
+    </>
+  );
 };
 
 export default VisaCard;

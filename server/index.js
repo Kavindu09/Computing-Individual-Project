@@ -1,21 +1,23 @@
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const express = require('express')
-const cors = require('cors');
-require('dotenv').config();
-const app = express();
-const port = process.env.PORT || 4880;
+import dotenv from "dotenv";
+import express from 'express';
+import cors from 'cors';
+import { MongoClient, ServerApiVersion, ObjectId } from 'mongodb'
 
-// middleware
+//  
+dotenv.config()
+const app = express();
+const port = process.env.PORT || 3000;
+
+
+// middelware
 app.use(cors());
 app.use(express.json());
 
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xd8rz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// setup mongodb
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster2.xklnv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster2`;
 
-console.log(uri);
 
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
@@ -24,168 +26,103 @@ const client = new MongoClient(uri, {
     }
 });
 
+// Connect to the MongoDB server
 async function run() {
     try {
-        // Connect the client to the server	(optional starting in v4.7)
         // await client.connect();
+        // // Send a ping to confirm a successful connection
+        // await client.db("admin").command({ ping: 1 });
 
-        const visaCollection = client.db('visaDB').collection('visa');
+        // database creation 
+        const db = client.db("visaDB"); 
+        // collection creation
+        const visasCollection = db.collection("visasCollection");
+        const visaApplicationsCollection = db.collection("visaApplicationsCollection");
 
-        const userCollection = client.db('visaDB').collection('users')
 
-        app.get('/visa', async (req, res) => {
-            const cursor = visaCollection.find();
-            const result = await cursor.toArray();
-            res.send(result);
+
+        // API 
+
+        app.get("/allVisas", async (req, res) => {
+            const visas = await visasCollection.find().sort({ Creation_date: -1 }).toArray();
+            res.json(visas);
+        })
+        app.get("/visas-collection", async (req, res) => {
+            const visas = await visasCollection.find().sort({ Creation_date: -1 }).limit(6).toArray();
+            res.json(visas);
+        })
+        app.get("/visas-collection/:id", async (req, res) => {
+            const visa = await visasCollection.findOne({ _id: new ObjectId(req.params.id) });
+            res.json(visa);
         })
 
-        app.get('/visa/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await visaCollection.findOne(query);
-            res.send(result);
-        })
-
-        // Fetch the six most recently added visas
-        app.get('/latestSix', async (req, res) => {
-            try {
-                const cursor = visaCollection.find().sort({ _id: -1 }).limit(6);
-                const result = await cursor.toArray();
-                res.send(result);
-            } catch (error) {
-                console.error("Error fetching latest data:", error);
-                res.status(500).send({ error: "Failed to fetch latest data" });
-            }
-        });
-
-
-        app.post('/visa', async (req, res) => {
+        // add new visa to the collection
+        app.post("/addVisa", async (req, res) => {
             const newVisa = req.body;
-            console.log(newVisa);
-            const result = await visaCollection.insertOne(newVisa);
+            const result = await visasCollection.insertOne(newVisa);
+            res.send(result);
+        })
+
+        // get my added Visas
+        app.get("/my-added-visas/:email", async (req, res) => {
+            const userEmail = req.params?.email;
+            const myAddedVisas = await visasCollection.find({ User_email: userEmail }).toArray();
+            res.send(myAddedVisas);
+        })
+
+        // update visa 
+        app.patch("/update-visa/:id", async (req, res) => {
+            const id = req.params?.id;
+            const updatedVisa = req.body;
+            const query = { _id: new ObjectId(id) };
+            const result = await visasCollection.updateOne(query, { $set: updatedVisa });
             res.send(result)
         })
 
-        app.patch('/users/:email', async (req, res) => {
-            const email = req.params.email;
-            const updatedUser = req.body;
-            const filter = { email };
-            const updateDoc = { $set: updatedUser };
-            const result = await userCollection.updateOne(filter, updateDoc);
-            res.send(result);
-        });
-
-
-        app.put('/visa/:id', async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) }
-            const options = { upsert: true };
-            const updateVisa = req.body;
-
-            const visa = {
-                $set: {
-                    countryPhoto: updateVisa.countryPhoto,
-                    countryName: updateVisa.countryName,
-                    visaType: updateVisa.visaType,
-                    processingTime: updateVisa.processingTime,
-                    requiredDocuments: updateVisa.requiredDocuments,
-                    description: updateVisa.description,
-                    fee: updateVisa.fee,
-                    validity: updateVisa.validity,
-                    ageRestriction: updateVisa.ageRestriction,
-                    applicationMethod: updateVisa.applicationMethod
-                }
-            }
-            const result = await visaCollection.updateOne(filter, visa, options)
-            res.send(result);
-        })
-
-        app.delete('/visa/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) }
-            const result = await visaCollection.deleteOne(query);
+        // delete visa
+        app.delete("/delete-visa/:id", async (req, res) => {
+            const filter = { _id: new ObjectId(req.params.id) };
+            const result = await visasCollection.deleteOne(filter);
             res.send(result);
         })
 
 
-        // Users related APIs\
-
-        app.get('/users', async (req, res) => {
-            const cursor = userCollection.find();
-            const result = await cursor.toArray()
+        // API For Visa Applications
+        app.post("/visa-application", async (req, res) => {
+            const newApplication = req.body;
+            const result = await visaApplicationsCollection.insertOne(newApplication);
             res.send(result);
         })
-
-        app.post('/users', async (req, res) => {
-            const newUser = req.body;
-            const query = { email: newUser.email }; // Check for existing email
-            const existingUser = await userCollection.findOne(query);
-
-            if (existingUser) {
-                console.log('User already exists in the database');
-                res.send({ message: 'User already exists', user: existingUser });
-            } else {
-                console.log('Creating new user', newUser);
-                const result = await userCollection.insertOne(newUser);
-                res.send({ message: 'User created', user: newUser, insertedId: result.insertedId });
-            }
-        });
-
-
-        app.delete('/users/:id', async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) };
-            const result = await userCollection.deleteOne(query);
-            res.send(result);
-        })
-
-        // Applied Collection
-        const applicationCollection = client.db("visaDB").collection("applications");
-
-        app.post("/applications", async (req, res) => {
-            const application = req.body;
-            const result = await applicationCollection.insertOne(application);
-            res.send(result);
-        });
-        
-        app.get("/applications", async (req, res) => {
-            const { email } = req.query;
-            const query = email ? { email } : {};
-            const applications = await applicationCollection.find(query).toArray();
+        app.get("/visa-applications/:email", async (req, res) => {
+            const userEmail = req.params?.email;
+            const applications = await visaApplicationsCollection.find({ Applicant_email: userEmail }).toArray();
             res.send(applications);
-        });
-        
-        app.delete("/applications/:id", async (req, res) => {
-            const id = req.params.id;
-            const query = { _id: new ObjectId(id) };
-            const result = await applicationCollection.deleteOne(query);
-            res.send(result); // Respond with the result (deletedCount)
-        });
-
-        app.get("/visas/:id", async (req, res) => {
-            const id = req.params.id;
-            const visa = await visaCollection.findOne({ _id: new ObjectId(id) });
-            res.send(visa);
-        });
+        })
+        app.delete("/visa-applications/:id", async (req, res) => {
+            const filter = { _id: new ObjectId(req.params.id) };
+            const result = await visaApplicationsCollection.deleteOne(filter);
+            res.send(result);
+        })
 
 
 
 
-        // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    } finally {
-        // Ensures that the client will close when you finish/error
-        // await client.close();
+
+
+
+    } catch (error) {
+        console.log(error.message);
     }
 }
-run().catch(console.dir);
+
+run()
 
 
 app.get('/', (req, res) => {
-    res.send('Visa Processing Server is running')
+    res.send('Visa Navigator server side is running');
 })
 
 app.listen(port, () => {
-    console.log(`Visa Server is running on port: ${port}`)
-})
+    console.log(`Server is running on port ${port}`);
+});
+

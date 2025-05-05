@@ -1,128 +1,161 @@
 import { useContext, useState } from "react";
-import { FaGoogle } from "react-icons/fa";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { AuthContext } from "../provider/AuthProvider";
-
+import { Helmet } from "react-helmet";
+import { FaEye, FaEyeSlash } from "react-icons/fa6";
+import { FcGoogle } from "react-icons/fc";
+import AuthContext from "../provider/AuthContext";
+import toast from "react-hot-toast";
+import loginImg from '../assets/login.gif'
 const Login = () => {
+  const navigate = useNavigate();
+  const { state } = useLocation();
+  const { signIn, googleSignIn } = useContext(AuthContext);
+  const [showPassword, setShowPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [error, setError] = useState("");
 
-    // const provider = new GoogleAuthProvider();
-    const { userLogin, setUser, signInWithGoogle } = useContext(AuthContext);
-    const [error, setError] = useState({});
-    const location = useLocation();
-    console.log(location);
-    const navigate = useNavigate();
-    // const emailRef = useRef();
+  const handleLogin = async (e) => {
+    try {
+      e.preventDefault();
+      const form = e.target;
+      const email = form.email.value;
+      const password = form.password.value;
+      setError("");
+      await signIn(email, password);
+      toast.success("Logged in successfully");
+      navigate(state || "/");
+      form.reset();
+      setForgotEmail("");
+    } catch {
+      setError("Invalid email or password");
+      toast.error("Please Try Again");
+    }
+  };
+  const handleGoogleSignIn = async () => {
+    try {
+      await googleSignIn();
+      navigate(state || "/");
+      toast.success("Logged in successfully with Google", {
+        duration: 4000,
+        position: "top-center",
+      });
+      // eslint-disable-next-line no-unused-vars
+    } catch (error) {
+      toast.error("An error occurred while Logged in with Google ");
+    }
+  };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const form = e.target;
-        const email = form.email.value;
-        const password = form.password.value;
-        setError({}); // Clear previous errors
-        userLogin(email, password)
-            .then((result) => {
-                const user = result.user;
-                setUser(user);
-                navigate(location?.state?.from?.pathname || "/");
-            })
-            .catch((err) => {
-                setError({ login: err.code });
-            });
-    };
-    
-
-    const handleGoogleSignIn = () => {
-        signInWithGoogle()
-            .then((result) => {
-                const user = result.user;
-                const newUser = {
-                    name: user.displayName,
-                    email: user.email,
-                    photo: user.photoURL,
-                };
-    
-                // Check or add user in the database
-                fetch('https://visa-navigator-server-umber.vercel.app/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newUser),
-                })
-                    .then((res) => res.json())
-                    .then((data) => {
-                        if (data.message === 'User already exists') {
-                            console.log('User already exists:', data.user);
-                        } else {
-                            console.log('New user created:', data.user);
-                        }
-                        setUser(user); // Save user to context
-                        navigate(location?.state?.from || '/', { replace: true });
-                    })
-                    .catch((err) => console.error('Error:', err));
-            })
-            .catch((error) => {
-                setError({ google: error.message });
-            });
-    };
-
-    return (
-        <div className="min-h-screen flex justify-center items-center">
-            <div className="card bg-base-100 w-full max-w-lg shrink-0 rounded-none p-10 ">
-                <h2 className="text-2xl font-semibold text-center">Login to your account</h2>
-                <form onSubmit={handleSubmit} className="card-body">
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text">Email</span>
-                        </label>
-                        <input
-                            name="email"
-                            type="email"
-                            // ref={emailRef}
-                            placeholder="email"
-                            className="input input-bordered"
-                            required
-                        />
-                    </div>
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text">Password</span>
-                        </label>
-                        <input
-                            name="password"
-                            type="password"
-                            placeholder="password"
-                            className="input input-bordered"
-                            required
-                        />
-                        {error.login && (
-                            <label className="label text-red-600 text-sm">{error.login}</label>
-                        )}
-                        <label className="label">
-                            <span className="label-text-alt link link-hover">Forgot password?</span>
-                        </label>
-                    </div>
-                    <div className="form-control mt-6">
-                        <button className="btn btn-neutral">Login</button>
-                    </div>
-                    <h2 className="text-center py-5">
-                        Don&#39;t have an Account?{" "}
-                        <Link className="font-semibold link-hover" to="/auth/register">
-                            Sign Up
-                        </Link>
-                    </h2>
-                    <div>
-                        <h2 className="text-center font-medium">Or</h2>
-                    </div>
-                    {error.google && (
-                        <label className="label text-red-600 text-sm">{error.google}</label>
-                    )}
-                </form>
-                <button onClick={handleGoogleSignIn} className="btn btn-wide md:w-[368px] mx-auto">
-                    <FaGoogle /> Login with Google
-                </button>
+  return (
+    <>
+      <Helmet>
+        <title> Login - Visa Navigator</title>
+        <meta
+          name="description"
+          content="Login to your visa navigator account."
+        />
+      </Helmet>
+      <div className="min-h-screen flex items-center justify-center dark:bg-neutral  py-12  sm:px-6 lg:px-8">
+        <div className="max-w-6xl w-full">
+          <div className="card grid md:grid-cols-2 border px-0 bg-base-100 shadow-xl mx-auto">
+            <div className=" ">
+              <div className=" pt-5 md:pt-0 flex justify-center items-center h-full md:border-r-4 ">
+                <img
+                  src={loginImg}
+                  alt="Login"
+                  className="  h-40 md:h-auto mx-auto rounded-full"
+                />
+              </div>
             </div>
-        </div>
-    );
-};
+            <div
+              className=" sm:p-6
+               "
+            >
+              <h2 className="mt-6 text-center text-3xl font-extrabold ">
+                Login
+              </h2>
+              <div className="card-body">
+                <form onSubmit={handleLogin} className="">
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text">Email</span>
+                    </label>
+                    <input
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      name="email"
+                      type="email"
+                      placeholder="email"
+                      className="input input-bordered"
+                      required
+                    />
+                  </div>
+                  <div className=" relative form-control">
+                    <label className="label">
+                      <span className="label-text">Password</span>
+                    </label>
+                    <input
+                      name="password"
+                      type={!showPassword ? "password" : "text"}
+                      placeholder="password"
+                      className="input input-bordered"
+                      required
+                    />
+                    {error && <p className="text-red-600 pt-3">{error}</p>}
 
+                    {showPassword ? (
+                      <FaEye
+                        size={20}
+                        className=" cursor-pointer absolute right-5 translate-y-12 top-1 "
+                        onClick={() => setShowPassword(!showPassword)}
+                      />
+                    ) : (
+                      <FaEyeSlash
+                        size={20}
+                        className=" cursor-pointer absolute right-5 translate-y-12 top-1 "
+                        onClick={() => setShowPassword(!showPassword)}
+                      />
+                    )}
+                    <label className="label">
+                      <Link
+                        state={forgotEmail}
+                        to="/forgotPassword"
+                        className="label-text-alt link link-hover"
+                      >
+                        Forgot password?
+                      </Link>
+                    </label>
+                  </div>
+                  <div className="form-control my-3">
+                    <button type="submit" className="btn btn-neutral">
+                      Login
+                    </button>
+                  </div>
+                </form>
+                <p className="text-sm text-center">
+                  Don&apos;t have an account?{" "}
+                  <Link to="/register" className="font-bold underline">
+                    Register here
+                  </Link>
+                </p>
+
+                <div className="divider">OR</div>
+                <div className="">
+                  <button
+                    onClick={handleGoogleSignIn}
+                    className="btn shadow w-full"
+                  >
+                    <FcGoogle className="text-xl" />
+                    <span className="">Login in with Google</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
 
 export default Login;

@@ -1,9 +1,11 @@
 {
-  "name": "visa-navigator-portal",
+  "name": "b10-a10-server-side-abdurrahmanmahmud5981",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
+    "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,6 +16,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.21.1",
-    "mongodb": "^6.11.0"
+    "mongodb": "^6.16.0",
+    "mongoose": "^8.14.1"
   }
 }

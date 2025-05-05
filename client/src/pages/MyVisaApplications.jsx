@@ -1,122 +1,202 @@
-import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
-import { useContext } from 'react';
-import { AuthContext } from '../provider/AuthProvider';
+import { useContext, useEffect, useState } from "react";
+
+import { BiSearch } from "react-icons/bi";
+import Swal from "sweetalert2";
+import AuthContext from "../provider/AuthContext";
+import { Helmet } from "react-helmet";
+import toast from "react-hot-toast";
+import Loader from "../components/Loader";
 
 const MyVisaApplications = () => {
-    const [applications, setApplications] = useState([]);
-    const [filteredApplications, setFilteredApplications] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const { user } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
+  const [applications, setApplications] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredApplications, setFilteredApplications] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    setIsLoading(true);
 
-    useEffect(() => {
-        const fetchApplications = async () => {
-            if (user && user.email) {
-                try {
-                    const response = await fetch(`https://visa-navigator-server-umber.vercel.app/applications?email=${user.email}`);
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    const data = await response.json();
-                    setApplications(data);
-                    setFilteredApplications(data);
-                } catch (error) {
-                    console.error('Error fetching applications:', error);
-                }
-            }
-        };
-        fetchApplications();
-    }, [user]);
-
-    const handleCancelApplication = async (applicationId) => {
-        const result = await Swal.fire({
-            title: "Are you sure?",
-            text: "You won't be able to revert this!",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Yes, cancel it!"
-        });
-
-        if (result.isConfirmed) {
-            const response = await fetch(`https://visa-navigator-server-umber.vercel.app/applications/${applicationId}`, {
-                method: 'DELETE'
-            });
-            const data = await response.json();
-            if (data.deletedCount > 0) {
-                const updatedApplications = applications.filter(app => app._id !== applicationId);
-                setApplications(updatedApplications);
-                setFilteredApplications(updatedApplications);
-                Swal.fire("Canceled!", "Your application has been canceled.", "success");
-            } else {
-                Swal.fire("Error!", "There was a problem canceling the application.", "error");
-            }
-        }
-    };
-
-    const handleSearch = () => {
-        const filtered = applications.filter(app => 
-            app.countryName.toLowerCase().includes(searchTerm.toLowerCase())
+    fetch(`https://visa-navigatore-server.vercel.app/visa-applications/${user?.email}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setApplications(data);
+        setFilteredApplications(data);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        toast.error(
+          "Error fetching applications: Failed to fetch applications",
+          err
         );
-        setFilteredApplications(filtered);
-    };
+        setIsLoading(false);
+      });
+  }, [user]);
 
-    return (
-        <div className="container mx-auto p-4">
-            <h2 className="text-3xl font-bold my-4">My Visa Applications</h2>
-            
-            {/* Search Bar */}
-            <div className="flex mb-4">
-                <input 
-                    type="text" 
-                    placeholder="Search by Country Name" 
-                    className="input input-bordered w-full max-w-xs mr-2"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <button 
-                    className="btn btn-primary"
-                    onClick={handleSearch}
-                >
-                    Search
-                </button>
-            </div>
-
-            {filteredApplications.length === 0 ? (
-                <p>No applications found.</p>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredApplications.map((app) => (
-                        <div key={app._id} className="card bg-base-100 shadow-xl p-4">
-                            <h3 className="font-bold text-xl mb-2">{app.countryName} Visa</h3>
-                            <img 
-                                src={app.countryPhoto} 
-                                alt={app.countryName} 
-                                className="w-full h-48 object-cover rounded-lg mb-4"
-                            />
-                            <div className="space-y-2">
-                                <p><strong>Name:</strong> {app.firstName} {app.lastName}</p>
-                                <p><strong>Email:</strong> {app.email}</p>
-                                <p><strong>Applied Date:</strong> {app.appliedDate}</p>
-                                <p><strong>Visa Fee:</strong> ${app.fee}</p>
-                                <p><strong>Visa Type:</strong> {app.visaType}</p>
-                                <p><strong>Application Method:</strong> {app.applicationMethod}Online</p>
-                            </div>
-                            <div className="card-actions justify-end mt-4">
-                                <button
-                                    className="btn btn-error text-white"
-                                    onClick={() => handleCancelApplication(app._id)}
-                                >
-                                    Cancel Application
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+  // Search functionality
+  const handleSearch = (e) => {
+    const filtered = applications.filter((app) =>
+      app?.Country_name?.toLowerCase().includes(e.toLowerCase())
     );
+    setFilteredApplications(filtered);
+  };
+
+  // Cancel application handler
+  const handleCancelApplication = (id) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        fetch(`https://visa-navigatore-server.vercel.app/visa-applications/${id}`, {
+          method: "DELETE",
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.deletedCount > 0) {
+              Swal.fire(
+                " Cancelled",
+                `Application for ${
+                  applications.find((app) => app._id === id)?.Country_name
+                } visa cancelled`,
+                "success"
+              );
+              const updatedApplications = applications.filter(
+                (app) => app._id !== id
+              );
+              setApplications(updatedApplications);
+              setFilteredApplications(updatedApplications);
+            }
+          })
+          .catch((err) => {
+            Swal.fire(
+              "Error Cancelling Visa Application",
+              err?.message,
+              "error"
+            );
+          });
+      }
+    });
+  };
+
+  return (
+    <>
+      <Helmet>
+        <title>My Visa Applications | Visa Navigator</title>
+        <meta
+          name="description"
+          content="My Visa App is a visa management application where users can apply for and manage their visas."
+        />
+        <meta
+          property="og:title"
+          content="My Visa Applications | Visa Navigator"
+        />
+        <meta
+          property="og:description"
+          content="My Visa App is a visa management application where users can apply for and manage their visas."
+        />
+      </Helmet>
+      <div className="mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          My Visa Applications
+        </h1>
+
+        {/* Search Section */}
+        <div className="flex mb-6">
+          <div className="join w-full">
+            <input
+              type="text"
+              placeholder="Search by country..."
+              className="input input-bordered focus:border-none focus:outline-2 join-item w-full"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                handleSearch(e.target.value);
+              }}
+            />
+            <button
+              className="btn btn-primary join-item"
+              onClick={() => handleSearch(searchTerm)}
+            >
+              <BiSearch size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Conditional Rendering for Loader and Content */}
+        {isLoading ? (
+          <Loader />
+        ) : filteredApplications.length === 0 ? (
+          <div className="text-center text-gray-500">
+            No visa applications found.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredApplications.map((application) => (
+              <div
+                key={application._id}
+                className="card bg-base-100 dark:bg-neutral border dark:border-neutral shadow-xl hover:shadow-2xl transition-shadow"
+              >
+                <figure className="px-8 py-8 bg-blue-50 dark:bg-base-100">
+                  <img
+                    src={application?.Country_image}
+                    alt={application.country}
+                    className="rounded-xl h-40 object-cover"
+                  />
+                </figure>
+                <div className="card-body p-4 sm:p-8">
+                  <h2 className="card-title">
+                    {application?.Country_name} - {application?.Visa_type}
+                  </h2>
+                  <div className="space-y-2 flex-grow">
+                    <p>
+                      <strong>Processing Time:</strong>{" "}
+                      {application?.Processing_time}
+                    </p>
+                    <p>
+                      <strong>Fee:</strong> ${application?.Fee}
+                    </p>
+                    <p>
+                      <strong>Validity:</strong> {application?.Validity}
+                    </p>
+                    <p>
+                      <strong>Application Method:</strong>{" "}
+                      {application?.Application_method}
+                    </p>
+                    <p>
+                      <strong>Applied Date:</strong> {application?.Apply_date}
+                    </p>
+                    <p>
+                      <strong>Applicant:</strong>{" "}
+                      {` ${application?.Applicant_first_name} ${application?.Applicant_last_name}`}
+                    </p>
+                    <p className="">
+                      <strong>Email:</strong>{" "}
+                      <span className="text-xs">
+                        {application?.Applicant_email}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="card-actions justify-end mt-4">
+                    <button
+                      className="btn btn-error btn-sm"
+                      onClick={() => handleCancelApplication(application._id)}
+                    >
+                      Cancel Application
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
 };
 
 export default MyVisaApplications;
